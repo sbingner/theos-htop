@@ -9,14 +9,14 @@ htop_TAG = 2.1.0
 
 CFGOPTS = --host=$(subst arm64,aarch64,$(ARCH))-apple-darwin --prefix=/usr --disable-unicode --disable-linux-affinity
 CC = "xcrun -sdk iphoneos clang"
-CFLAGS = -isysroot $(ISYSROOT) $(SDKFLAGS) $(VERSIONFLAGS) $(_THEOS_TARGET_CC_CFLAGS) -w -Wno-implicit-function-declaration -I$(THEOS_PROJECT_DIR)/ncurses.$(ARCH)/usr/include -I$(THEOS_PROJECT_DIR)/iOS_app_re_tools/missing_headers
+CFLAGS = -isysroot $(ISYSROOT) $(SDKFLAGS) $(VERSIONFLAGS) $(_THEOS_TARGET_CC_CFLAGS) -w -Wno-implicit-function-declaration -I$(THEOS_PROJECT_DIR)/ncurses.$(ARCH)/usr/include -I$(THEOS_PROJECT_DIR)/iOS_app_re_tools/missing_headers -I$(THEOS_PROJECT_DIR)/include
 CPP = $(CC) -E
 CPPFLAGS = $(CFLAGS)
 LDFLAGS = -L$(THEOS_PROJECT_DIR)/$(ARCH).ncurses/usr/lib
 MAKEFLAGS = -j16
-
-SIGN_BINS = $(shell find $(THEOS_STAGING_DIR) -type f -perm +111)
-SIGN_LIBS = $(shell find $(THEOS_STAGING_DIR) -name *.so)
+PERM_FLAG := $(shell find --help | grep perm | sed -e s/'.*-perm '// -e s/' .*'// | grep -q '\[+-\]' && echo + || echo /)
+SIGN_BINS = for file in $$(find $(THEOS_STAGING_DIR) -type f -perm $(PERM_FLAG)111); do file -h -b --mime $$file | grep -q "charset=binary" && echo $$file || true; done
+SIGN_LIBS = for file in $$(find $(THEOS_STAGING_DIR) -name *.so); do file -h -b --mime $$file | grep -q "charset=binary" && echo $$file || true; done
 
 ARCH = $(basename $@)
 BUILD = $(ARCH).$(CPROJ)build
@@ -69,7 +69,7 @@ staged: $(foreach ARCH,$(ARCHS), $(ARCH).staged)
 	@echo done.
 	@echo -n Merging binaries...
 	$(ECHO_NOTHING)set -e ;\
-	BINS=$$(for file in $$(find $(THEOS_STAGING_DIR) -type f -perm +111); do file -h -b --mime $$file | grep -q "charset=binary" && echo $$file || true; done | sed -e 's|$(THEOS_STAGING_DIR)||g') ;\
+	BINS=$$($(SIGN_BINS) | sed -e 's|$(THEOS_STAGING_DIR)||g') ;\
 	for file in $$BINS; do \
 		rm $(THEOS_STAGING_DIR)/$$file; \
 		$(_THEOS_PLATFORM_LIPO) $(foreach ARCH,$(ARCHS),-arch $(ARCH) $(THEOS_OBJ_DIR)/$(ARCH)/$$file) -create -output $(THEOS_STAGING_DIR)/$$file ;\
@@ -80,13 +80,13 @@ staged: $(foreach ARCH,$(ARCHS), $(ARCH).staged)
 after-stage:: staged
 	@echo -n Signing binaries...
 	$(ECHO_NOTHING)set -e ;\
-	BINS=$$(for file in $(SIGN_BINS); do file -h -b --mime $$file | grep -q "charset=binary" && echo $$file || true; done) ;\
+	BINS=$$($(SIGN_BINS));\
 	for file in $$BINS; do ldid -Sent.xml $$file; done;$(ECHO_END)
 	@echo done.
 	@echo -n Signing libraries...
 	$(ECHO_NOTHING)set -e ;\
-	BINS=$$(for file in $(SIGN_LIBS); do file -h -b --mime $$file | grep -q "charset=binary" && echo $$file || true; done) ;\
-	for file in $$BINS; do ldid -S $$file; done;$(ECHO_END)
+	LIBS=$$($(SIGN_LIBS));\
+	for file in $$LIBS; do ldid -S $$file; done;$(ECHO_END)
 	@echo done.
 
 after-clean::
