@@ -1,0 +1,6 @@
+[submodule "htop"]
+	path = htop
+	url = git@github.com:hishamhm/htop.git
+[submodule "iOS_app_re_tools"]
+	path = iOS_app_re_tools
+	url = git@github.com:emonti/iOS_app_re_tools.git

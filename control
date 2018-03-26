@@ -1,0 +1,18 @@
+Package: htop
+Name: HTOP
+Version: 2.1.0
+Maintainer: Samuel Bingner
+Architecture: iphoneos-arm
+Depends: ncurses
+Pre-Depends: dpkg (>= 1.14.25-8)
+Description: interactive processes viewer
+	Htop is an ncursed-based process viewer similar to top, but it
+	allows one to scroll the list vertically and horizontally to see
+	all processes and their full command lines.
+	.
+	Tasks related to processes (killing, renicing) can be done without
+	entering their PIDs.
+Homepage: http://hisham.hm/htop/
+Section: utils
+Priority: optional
+Tag: purpose::console, role::hacker
